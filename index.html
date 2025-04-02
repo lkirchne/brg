@@ -200,7 +200,7 @@
       document.getElementById("hintBox").style.display = "none";
       document.getElementById("hintBox").textContent = "";
 
-      const equationType = getRandomInt(1, 5); // 1: x im Nenner, 2: x im Zähler, 3: gemischt
+      const equationType = getRandomInt(1, 4); // 1: x im Nenner, 2: x im Zähler, 3: gemischt
       let equationText = "";
       let solution;
       let a, b, c;
@@ -221,7 +221,7 @@
           solution = c * b - a;
           equationText = `$$\\frac{x + ${a}}{${b}} = ${c}$$`;
           break;
-        case 3:
+        case 5:
           // Gemischte Bruchgleichung: (x + a) / (x - b) = c
           a = getRandomInt(1, 10);
           b = getRandomInt(1, 10);
@@ -229,14 +229,14 @@
           solution = (c * b - a) / (c-1);
           equationText = `$$\\frac{x + ${a}}{x - ${b}} = ${c}$$`;
           break;
-        case 4:
+        case 3:
           // Gemischte Bruchgleichung: a * x = c
           a = getRandomInt(1, 10);
           c = getRandomInt(1, 5); // Kleinere Werte für einfachere Berechnungen
           solution = (c/a);
           equationText = `$$${a} \\cdot x = ${c}$$`;
           break;
-        case 5:
+        case 4:
           // Gemischte Bruchgleichung: a/(x+b) = c
           a = getRandomInt(1, 10);
           b = getRandomInt(-10, 10);
