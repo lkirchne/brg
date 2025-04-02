@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Übungsapp für Bruchgleichungen</title>
+  <!-- Google Fonts für einen kinderfreundlichen Look -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+  <style>
+    /* Allgemeines Styling */
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #a2d9ff, #e0f7ff);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      background: #4fa8d6;
+      color: white;
+      text-align: center;
+      padding: 15px 10px;
+      border-bottom: 4px solid #2e7aa1;
+      font-family: 'Fredoka One', cursive;
+      font-size: 28px;
+    }
+    .container {
+      background: white;
+      max-width: 800px;
+      width: 95%;
+      margin: 20px;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .controls, .equation, .timer, form, .feedback, .stats, .hintBox {
+      text-align: center;
+      margin-bottom: 15px;
+      margin-top: 25px;
+    }
+    .equation {
+      font-family: 'Fredoka One', cursive;
+      font-size: 32px;
+      color: #333;
+    }
+    input[type="number"], select {
+      font-size: 18px;
+      padding: 10px;
+      width: 80%;
+      max-width: 300px;
+      border: 2px solid #4fa8d6;
+      border-radius: 8px;
+      outline: none;
+    }
+    button {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      background: #4fa8d6;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #2e7aa1;
+    }
+    .feedback {
+      font-size: 20px;
+      font-weight: 500;
+      height: 28px;
+    }
+    .stats {
+      font-size: 16px;
+      border-top: 2px solid #ddd;
+      padding-top: 10px;
+      color: #555;
+    }
+    .timer {
+      font-size: 22px;
+      font-weight: bold;
+      color: #d64541;
+    }
+    .hintBox {
+      background: #fff3c4;
+      padding: 10px;
+      border: 2px dashed #f2c94c;
+      border-radius: 8px;
+      display: none;
+      max-width: 90%;
+      margin: 0 auto;
+      font-size: 16px;
+      color: #555;
+    }
+    @media (max-width: 768px) {
+      .equation {
+        font-size: 28px;
+      }
+      input[type="number"], select {
+        width: 90%;
+      }
+      header {
+        font-size: 24px;
+      }
+    }
+    .buttonBar {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      Übungsapp für Bruchgleichungen
+    </header>
+    <!-- Auswahl des Schwierigkeitsgrads -->
+    <!-- <div class="controls">
+      <label for="difficulty">Schwierigkeitsgrad: </label>
+      <select id="difficulty">
+        <option value="einfach">Einfach</option>
+        <option value="mittel">Mittel</option>
+        <option value="schwer">Schwer</option>
+      </select>
+    </div>
+    -->
+    <!-- Anzeige der Gleichung (wird mit MathJax gerendert) -->
+    <div class="equation" id="equation"></div>
+    <!-- Timer -->
+    <div class="timer" id="timer">30</div>
+    <!-- Formular zur Antwortabgabe -->
+    <form id="answerForm">
+      <input type="number" step="any" id="answer" placeholder="Deine Lösung für x" required>
+      <div class="buttonBar">
+        <button type="submit">Antwort prüfen</button>
+        <button type="button" id="newEquation">Neue Gleichung</button>
+        <button type="button" id="showHint" disabled>Hinweis anzeigen</button>
+      </div>
+    </form>
+    <!-- Feedbackbereich -->
+    <div class="feedback" id="feedback"></div>
+    <!-- Hinweise -->
+    <div class="hintBox" id="hintBox"></div>
+    <!-- Statistikbereich -->
+    <div class="stats" id="stats">
+      Versuche: 0 | Richtig: 0 | Falsch: 0 | Punkte: 0
+    </div>
+  </div>
+  
+  <script>
+    // Globale Variablen
+    let currentEquation = {};
+    let currentSolution = 0;
+    let timerInterval;
+    let timeLeft = 90; // Sekunden pro Aufgabe
+    let totalAttempts = 0, correctCount = 0, wrongCount = 0, points = 0;
+
+    // Funktion zum Starten des Timers
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 90;
+      document.getElementById("timer").textContent = timeLeft;
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          feedback(false, "Zeit abgelaufen! Richtig wäre: " + currentSolution);
+          wrongCount++;
+          totalAttempts++;
+          updateStats();
+        }
+      }, 1000);
+    }
+
+    // Funktion zur Aktualisierung der Statistikanzeige
+    function updateStats() {
+      document.getElementById("stats").textContent =
+        "Versuche: " + totalAttempts +
+        " | Richtig: " + correctCount +
+        " | Falsch: " + wrongCount +
+        " | Punkte: " + points;
+    }
+
+    // Funktion zur Anzeige von Feedback
+    function feedback(isCorrect, message) {
+      const feedbackEl = document.getElementById("feedback");
+      feedbackEl.textContent = message;
+      feedbackEl.style.color = isCorrect ? "green" : "red";
+    }
+
+    // Funktion zur Generierung einer neuen Gleichung inkl. Speicherung der Parameter für Hinweise
+    function generateEquation() {
+      document.getElementById("hintBox").style.display = "none";
+      document.getElementById("hintBox").textContent = "";
+
+      const equationType = getRandomInt(1, 5); // 1: x im Nenner, 2: x im Zähler, 3: gemischt
+      let equationText = "";
+      let solution;
+      let a, b, c;
+      switch (equationType) {
+        case 1:
+          // x im Nenner: a / (x - b) = c
+          a = getRandomInt(1, 10);
+          b = getRandomInt(1, 10);
+          c = getRandomInt(1, 10);
+          solution = a / c + b;
+          equationText = `$$\\frac{${a}}{x - ${b}} = ${c}$$`;
+          break;
+        case 2:
+          // x im Zähler: (x + a) / b = c
+          a = getRandomInt(1, 10);
+          b = getRandomInt(1, 10);
+          c = getRandomInt(1, 10);
+          solution = c * b - a;
+          equationText = `$$\\frac{x + ${a}}{${b}} = ${c}$$`;
+          break;
+        case 3:
+          // Gemischte Bruchgleichung: (x + a) / (x - b) = c
+          a = getRandomInt(1, 10);
+          b = getRandomInt(1, 10);
+          c = getRandomInt(1, 5); // Kleinere Werte für einfachere Berechnungen
+          solution = (c * b - a) / (1 - c);
+          equationText = `$$\\frac{x + ${a}}{x - ${b}} = ${c}$$`;
+          break;
+        case 4:
+          // Gemischte Bruchgleichung: a * x = c
+          a = getRandomInt(1, 10);
+          c = getRandomInt(1, 5); // Kleinere Werte für einfachere Berechnungen
+          solution = (c/a);
+          equationText = `$$${a} \\cdot x = ${c}$$`;
+          break;
+        case 5:
+          // Gemischte Bruchgleichung: a/(x+b) = c
+          a = getRandomInt(1, 10);
+          b = getRandomInt(-10, 10);
+          c = getRandomInt(1, 5); // Kleinere Werte für einfachere Berechnungen
+          solution = (a/c)-(b);
+          if(b > 0) 
+            equationText = `$$\\frac{${a}}{x + ${b}} = ${c}$$`;
+          else
+            equationText = `$$\\frac{${a}}{x + (${b})} = ${c}$$`;
+          break;
+      }
+
+      // Speichern der aktuellen Lösung
+      currentSolution = solution;
+      currentEquation = { equationType, a, b, c};
+      // Gleichung ins HTML einfügen
+      document.getElementById("equation").innerHTML = equationText;
+      if (typeof MathJax !== "undefined") {
+        MathJax.typesetPromise();
+      }
+
+      // Timer starten
+      startTimer();
+
+      // Feedback-Text zurücksetzen
+      document.getElementById("feedback").textContent = "";
+      document.getElementById("answer").value = "";
+    }
+
+    // Hilfsfunktion für Zufallszahlen im Bereich [min, max]
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Antwort überprüfen und Punkte vergeben
+    document.getElementById("answerForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+      clearInterval(timerInterval);
+      const userAnswer = parseFloat(document.getElementById("answer").value);
+      totalAttempts++;
+      const bonus = timeLeft > 20 ? 5 : 0;
+      if (Math.abs(userAnswer - currentSolution) < 0.005) {
+        correctCount++;
+        points += 10 + bonus;
+        feedback(true, "Richtig! +" + (10+bonus) + " Punkte");
+      } else {
+        wrongCount++;
+        feedback(false, "Falsch! Richtig wäre: " + currentSolution);
+      }
+      updateStats();
+    });
+
+    // Funktion zur Anzeige von Hilfestellungen/Lösungsweg
+    document.getElementById("showHint").addEventListener("click", function() {
+      let hintText = "";
+      if (currentEquation.type === 0) {
+        hintText = `Löse \\( ${currentEquation.a}x ${currentEquation.b>=0 ? "+ "+currentEquation.b : "- "+Math.abs(currentEquation.b)} = c \\). Ziehe ${currentEquation.b} von beiden Seiten ab und teile durch ${currentEquation.a}, um \\(x\\) zu isolieren.`;
+      } else {
+        hintText = `Bei \\( \\frac{${currentEquation.a}x ${currentEquation.b>=0 ? "+ "+currentEquation.b : "- "+Math.abs(currentEquation.b)}}{${currentEquation.c}} = d \\) multipliziere beide Seiten mit ${currentEquation.c} und löse dann \\(x = \\frac{d \\cdot ${currentEquation.c} - ${currentEquation.b}}{${currentEquation.a}}\\).`;
+      }
+      const hintBox = document.getElementById("hintBox");
+      hintBox.innerHTML = hintText;
+      hintBox.style.display = "block";
+      if (typeof MathJax !== "undefined") {
+        MathJax.typesetPromise([hintBox]);
+      }
+    });
+
+    // Neue Gleichung generieren
+    document.getElementById("newEquation").addEventListener("click", generateEquation);
+
+    // Initiale Gleichung laden und Statistiken initialisieren
+    generateEquation();
+    updateStats();
+  </script>
+</body>
+</html>
