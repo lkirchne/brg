@@ -226,7 +226,7 @@
           a = getRandomInt(1, 10);
           b = getRandomInt(1, 10);
           c = getRandomInt(1, 5); // Kleinere Werte für einfachere Berechnungen
-          solution = (c * b - a) / (1 - c);
+          solution = (c * b - a) / (c-1);
           equationText = `$$\\frac{x + ${a}}{x - ${b}} = ${c}$$`;
           break;
         case 4:
